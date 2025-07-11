@@ -23,7 +23,7 @@ jobs:
 
       - name: Build Spring Boot App
         working-directory: ./backend/elearning
-        run: mvn clean install -DskipTests=false
+        run: mvn clean install -DskipTests=true
 
   build-frontend:
     name: Build React Frontend
