@@ -1,0 +1,32 @@
+name: Deploy Backend to Heroku
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build Spring Boot App
+        working-directory: ./backend/elearning
+        run: mvn clean install -DskipTests=true
+
+      - name: Deploy to Heroku
+        working-directory: ./backend/elearning
+        run: |
+          git init
+          git remote add heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
+          git add .
+          git commit -m "Heroku Deploy"
+          git push heroku HEAD:main --force
