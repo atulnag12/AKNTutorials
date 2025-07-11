@@ -26,6 +26,8 @@ jobs:
         working-directory: ./backend/elearning
         run: |
           git init
+          git config user.email "ci@github.com"
+          git config user.name "GitHub CI"
           git remote add heroku https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git
           git add .
           git commit -m "Heroku Deploy"
