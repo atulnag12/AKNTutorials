@@ -19,25 +19,25 @@ jobs:
         working-directory: frontend/elearning
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      - name: Clean cache & install fresh
-        run: |
-          rm -rf node_modules build package-lock.json
-          npm cache clean --force
-          npm install
+      - name: Install dependencies
+        run: npm install
 
-      - name: Build React app
+      - name: Build React App
         run: npm run build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build
+          publish_dir: frontend/elearning/build
+          publish_branch: gh-pages
+          force_orphan: true
