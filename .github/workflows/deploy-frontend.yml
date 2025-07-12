@@ -27,8 +27,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      - name: Clean cache & install fresh
+        run: |
+          rm -rf node_modules build package-lock.json
+          npm cache clean --force
+          npm install
 
       - name: Build React app
         run: npm run build
@@ -37,5 +40,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: frontend/elearning/build
-
+          publish_dir: build
