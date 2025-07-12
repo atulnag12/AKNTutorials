@@ -2,7 +2,7 @@
   "name": "elearning",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://atulnag12.github.io/akntutorials",
+  "homepage": "https://atulnag12.github.io/AKNTutorials",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
