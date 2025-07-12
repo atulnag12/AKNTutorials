@@ -1,0 +1,8 @@
+.courses {
+  padding: 20px;
+}
+
+.courses ul {
+  list-style-type: square;
+  padding-left: 20px;
+}

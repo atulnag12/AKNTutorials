@@ -1,15 +1,62 @@
-.header {
-  background-color: #222;
-  color: white;
-  padding: 10px;
+/* Header.css */
+
+.home-header {
+  background-color: #ffffff;
+  padding: 16px 32px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  position: sticky;
+  top: 0;
+  z-index: 999;
 }
 
-.nav a {
-  margin-right: 15px;
-  color: white;
+.home-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.home-left {
+  display: flex;
+  align-items: center;
+}
+
+.home-logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #00866c;
+  margin-right: 40px;
+}
+
+.home-menu {
+  list-style: none;
+  display: flex;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+}
+
+.home-menu li a {
   text-decoration: none;
+  color: #111;
+  font-weight: 500;
+  font-size: 16px;
+  transition: color 0.3s ease;
 }
 
-.nav a:hover {
-  text-decoration: underline;
+.home-menu li a:hover {
+  color: #00866c;
+}
+
+.home-search-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.home-search {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 200px;
 }

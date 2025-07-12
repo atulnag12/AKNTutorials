@@ -1,48 +1,72 @@
 import React, { useState } from 'react';
 import './Login.css';
-import { loginUser } from '../api';
 
-const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+function Login() {
+  const [isLogin, setIsLogin] = useState(true);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await loginUser({ username, password });
-      localStorage.setItem('token', response.token);
-      alert('Login successful!');
-    } catch (err) {
-      setError('Invalid credentials');
-    }
-  };
+  const toggleForm = () => setIsLogin(!isLogin);
 
   return (
-    <div className="login">
-      <h2>Login</h2>
-      {error && <p className="error">{error}</p>}
-      <form onSubmit={handleLogin}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
-        <br />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <br />
-        <button type="submit">Login</button>
-      </form>
+    <div className="login-container">
+      <h2 className="login-heading">
+        {isLogin
+          ? 'Access Your Courses – Login or Sign Up'
+          : 'Join the Future of Learning with AKNTutorials'}
+      </h2>
+
+      <div className="login-card">
+        <form>
+          {!isLogin && (
+            <>
+              <label htmlFor="fullname">Full Name</label>
+              <input type="text" id="fullname" placeholder="Enter your full name" />
+            </>
+          )}
+
+          <label htmlFor="email">Email or Phone</label>
+          <input type="text" id="email" placeholder="Enter email or phone number" />
+
+          <label htmlFor="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password" />
+
+          {isLogin && (
+            <div className="remember-me">
+              <input type="checkbox" id="remember" />
+              <label htmlFor="remember">Remember me</label>
+            </div>
+          )}
+
+          <button type="submit" className="login-btn">
+            {isLogin ? 'Login' : 'Sign Up'}
+          </button>
+
+          <div className="divider">or</div>
+
+          <button type="button" className="google-btn">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png"
+              alt="Google Icon"
+            />
+            Continue with Google
+          </button>
+        </form>
+
+        <div className="login-footer">
+          {isLogin ? (
+            <>
+              New to AKNTutorials?
+              <span onClick={toggleForm} className="toggle-link"> Sign up</span>
+            </>
+          ) : (
+            <>
+              Already have an account?
+              <span onClick={toggleForm} className="toggle-link"> Log in</span>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
-};
+}
 
 export default Login;
