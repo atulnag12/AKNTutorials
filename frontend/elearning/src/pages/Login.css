@@ -1,0 +1,23 @@
+.login {
+  padding: 20px;
+  max-width: 400px;
+  margin: auto;
+}
+
+.login input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.login button {
+  padding: 10px 20px;
+  background-color: #222;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.login .error {
+  color: red;
+}
