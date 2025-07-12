@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "https://atulnag12.github.io/AKNTutorials/static/css/main.abfa6d0f.css",
+    "main.js": "https://atulnag12.github.io/AKNTutorials/static/js/main.7912215e.js",
+    "index.html": "https://atulnag12.github.io/AKNTutorials/index.html",
+    "main.abfa6d0f.css.map": "https://atulnag12.github.io/AKNTutorials/static/css/main.abfa6d0f.css.map",
+    "main.7912215e.js.map": "https://atulnag12.github.io/AKNTutorials/static/js/main.7912215e.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.abfa6d0f.css",
+    "static/js/main.7912215e.js"
+  ]
+}
