@@ -1,126 +1,146 @@
-import zipfile
-import os
-import subprocess
-import difflib
-from pathlib import Path
+import os, zipfile, shutil, subprocess, difflib, pathlib, argparse, logging
 
-CFR_JAR = "/path/to/cfr.jar"   # download from https://github.com/leibnitz27/cfr
+# ---------------- Logger Setup ----------------
+def setup_logger(logfile="jar_diff.log"):
+    logger = logging.getLogger("JarDiff")
+    logger.setLevel(logging.DEBUG)
 
-def extract_jar(jar_path, extract_to):
-    with zipfile.ZipFile(jar_path, 'r') as jar:
-        jar.extractall(extract_to)
+    # Console handler (INFO only)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    ch_formatter = logging.Formatter("[%(levelname)s] %(message)s")
+    ch.setFormatter(ch_formatter)
 
-def decompile_class(class_path, output_dir):
-    os.makedirs(output_dir, exist_ok=True)
-    subprocess.run([
-        "java", "-jar", CFR_JAR,
-        class_path, "--outputdir", output_dir, "--silent", "true"
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # File handler (DEBUG for detailed trace)
+    fh = logging.FileHandler(logfile, mode="w", encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+    fh_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    fh.setFormatter(fh_formatter)
 
-def collect_classes(base_dir, decompiled_dir):
-    file_map = {}
-    for root, _, files in os.walk(base_dir):
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+    return logger
+
+logger = setup_logger()
+
+# ---------------- Core Functions ----------------
+def unzip_jar(jar, outdir):
+    logger.info(f"Unzipping {jar} -> {outdir}")
+    shutil.rmtree(outdir, ignore_errors=True)
+    os.makedirs(outdir, exist_ok=True)
+    with zipfile.ZipFile(jar, 'r') as z:
+        z.extractall(outdir)
+    logger.debug(f"Extracted {len(z.namelist())} files from {jar}")
+
+def collect_files(base):
+    result = []
+    for root, _, files in os.walk(base):
         for f in files:
             if f.endswith(".class"):
-                rel_path = os.path.relpath(os.path.join(root, f), base_dir)
-                java_rel = rel_path.replace(".class", ".java")
-                class_file = os.path.join(root, f)
-                java_file = os.path.join(decompiled_dir, java_rel)
+                result.append(os.path.relpath(os.path.join(root, f), base))
+    logger.info(f"Collected {len(result)} .class files from {base}")
+    return sorted(result)
 
-                # Decompile
-                out_dir = os.path.dirname(java_file)
-                decompile_class(class_file, out_dir)
+def javap(class_rel, base):
+    fqcn = class_rel[:-6].replace("/", ".")
+    cmd = ["javap", "-p", "-c", "-s", "-classpath", base, fqcn]
+    logger.debug(f"Running javap on {fqcn}")
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if proc.stderr:
+        logger.warning(f"javap warning for {fqcn}: {proc.stderr.strip()}")
+    return proc.stdout.splitlines()
 
-                if os.path.exists(java_file):
-                    with open(java_file, "r", errors="ignore") as jf:
-                        content = jf.readlines()
-                else:
-                    content = []
+def decompile_cfr(class_rel, base, cfr_jar="cfr.jar"):
+    path = os.path.join(base, class_rel)
+    logger.debug(f"Decompiling with CFR: {path}")
+    cmd = ["java", "-jar", cfr_jar, path, "--silent", "--comments", "false"]
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if proc.stderr:
+        logger.warning(f"CFR warning for {class_rel}: {proc.stderr.strip()}")
+    return proc.stdout.splitlines()
 
-                file_map[java_rel.replace("\\", "/")] = content
-    return file_map
+def diff_files(class_rel, old_base, new_base, report_dir, mode, cfr_jar):
+    logger.info(f"Diffing {class_rel} in {mode} mode")
+    if os.path.exists(os.path.join(old_base, class_rel)):
+        old_txt = javap(class_rel, old_base) if mode=="bytecode" else decompile_cfr(class_rel, old_base, cfr_jar)
+    else:
+        old_txt = []
+        logger.debug(f"Missing in OLD: {class_rel}")
 
-def compare_jars_code(jar1, jar2, report_file="jar_code_diff_report.html"):
-    dir1, dir2 = "jar1_classes", "jar2_classes"
-    decompiled1, decompiled2 = "jar1_java", "jar2_java"
+    if os.path.exists(os.path.join(new_base, class_rel)):
+        new_txt = javap(class_rel, new_base) if mode=="bytecode" else decompile_cfr(class_rel, new_base, cfr_jar)
+    else:
+        new_txt = []
+        logger.debug(f"Missing in NEW: {class_rel}")
 
-    os.makedirs(dir1, exist_ok=True)
-    os.makedirs(dir2, exist_ok=True)
-    os.makedirs(decompiled1, exist_ok=True)
-    os.makedirs(decompiled2, exist_ok=True)
+    diff_html = difflib.HtmlDiff().make_file(old_txt, new_txt, "OLD/"+class_rel, "NEW/"+class_rel)
+    outpath = os.path.join(report_dir, class_rel.replace("/", "_")+".html")
+    os.makedirs(os.path.dirname(outpath), exist_ok=True)
+    with open(outpath, "w", encoding="utf-8") as f:
+        f.write(diff_html)
+    return pathlib.Path(outpath).name
 
-    extract_jar(jar1, dir1)
-    extract_jar(jar2, dir2)
-
-    files1 = collect_classes(dir1, decompiled1)
-    files2 = collect_classes(dir2, decompiled2)
-
-    all_files = sorted(set(files1.keys()) | set(files2.keys()))
-
-    # Counters
-    identical_count = 0
-    modified_count = 0
-    only_in_jar1 = 0
-    only_in_jar2 = 0
-
-    rows = []
-
-    for f in all_files:
-        src1 = files1.get(f)
-        src2 = files2.get(f)
-
-        if src1 is None:
-            only_in_jar2 += 1
-            status = f"<span class='missing'>Only in {jar2} ✘</span>"
-        elif src2 is None:
-            only_in_jar1 += 1
-            status = f"<span class='missing'>Only in {jar1} ✘</span>"
-        else:
-            if src1 == src2:
-                identical_count += 1
-                status = "<span class='identical'>Identical ✓</span>"
-            else:
-                modified_count += 1
-                diff_file = f"diff_{f.replace('/', '_')}.html"
-                diff_html = difflib.HtmlDiff().make_file(
-                    src1, src2, fromdesc=jar1, todesc=jar2
-                )
-                os.makedirs("diffs", exist_ok=True)
-                with open(os.path.join("diffs", diff_file), "w", encoding="utf-8") as df:
-                    df.write(diff_html)
-                status = f"<span class='different'>Modified ≠</span> (<a href='diffs/{diff_file}'>View Diff</a>)"
-
-        rows.append(f"<tr><td>{f}</td><td>{status}</td></tr>")
-
-    # HTML Output
+def build_index(report_dir, files, links):
+    logger.info("Building index.html")
     html = ["<html><head><style>",
-            "table {border-collapse: collapse; width: 100%; font-family: monospace;}",
-            "td, th {border: 1px solid #999; padding: 4px;}",
-            ".identical {color: green; font-weight: bold;}",
-            ".different {color: orange; font-weight: bold;}",
-            ".missing {color: red; font-weight: bold;}",
-            ".summary {margin-bottom: 20px; padding: 10px; border: 1px solid #999; width: 40%;}",
-            "</style></head><body>",
-            f"<h2>JAR Code Diff Report</h2><p>Comparing: <b>{jar1}</b> vs <b>{jar2}</b></p>"]
+            "ul{list-style:none;} li{margin-left:20px;} .folder{font-weight:bold;cursor:pointer;}",
+            "iframe{border:1px solid #ccc;}",
+            "</style>",
+            "<script>",
+            "function toggle(e){var ul=e.nextElementSibling;ul.style.display=(ul.style.display=='none'?'block':'none');}",
+            "</script>",
+            "</head><body><h1>JAR Diff Report</h1><ul>"]
 
-    # Summary Dashboard
-    html.append("<div class='summary'><h3>Summary</h3><ul>")
-    html.append(f"<li class='identical'>Identical: {identical_count}</li>")
-    html.append(f"<li class='different'>Modified: {modified_count}</li>")
-    html.append(f"<li class='missing'>Only in {jar1}: {only_in_jar1}</li>")
-    html.append(f"<li class='missing'>Only in {jar2}: {only_in_jar2}</li>")
-    html.append("</ul></div>")
+    tree = {}
+    for f, link in zip(files, links):
+        parts = f.split("/")
+        node = tree
+        for p in parts[:-1]:
+            node = node.setdefault(p, {})
+        node[parts[-1]] = link
 
-    # File-level table
-    html.append("<table><tr><th>Class</th><th>Status</th></tr>")
-    html.extend(rows)
-    html.append("</table></body></html>")
+    def render(node):
+        html.append("<ul>")
+        for k, v in sorted(node.items()):
+            if isinstance(v, dict):
+                html.append(f"<li class='folder' onclick='toggle(this)'>{k}</li>")
+                render(v)
+            else:
+                html.append(f"<li><a href='{v}' target='right'>{k}</a></li>")
+        html.append("</ul>")
 
-    with open(report_file, "w", encoding="utf-8") as f:
+    render(tree)
+    html.append("</ul><iframe name='right' width='100%' height='800px'></iframe></body></html>")
+    with open(os.path.join(report_dir, "index.html"), "w") as f:
         f.write("\n".join(html))
 
-    print(f"Code diff report generated: {report_file}")
+def main(oldjar, newjar, report_dir, mode, cfr_jar):
+    old_unzip, new_unzip = "old_unzipped", "new_unzipped"
+    unzip_jar(oldjar, old_unzip)
+    unzip_jar(newjar, new_unzip)
 
+    files = sorted(set(collect_files(old_unzip)) | set(collect_files(new_unzip)))
+    os.makedirs(report_dir, exist_ok=True)
+
+    links = []
+    for f in files:
+        links.append(diff_files(f, old_unzip, new_unzipped, report_dir, mode, cfr_jar))
+
+    build_index(report_dir, files, links)
+    logger.info(f"✅ Report generated: {report_dir}/index.html")
 
 if __name__ == "__main__":
-    compare_jars_code("old.jar", "new.jar")
+    parser = argparse.ArgumentParser(description="Generate Beyond Compare–style JAR diff")
+    parser.add_argument("oldjar", help="Path to old JAR")
+    parser.add_argument("newjar", help="Path to new JAR")
+    parser.add_argument("--mode", choices=["bytecode","source"], default="bytecode", help="Diff mode")
+    parser.add_argument("--cfr", default="cfr.jar", help="Path to CFR jar (if mode=source)")
+    parser.add_argument("--out", default="report", help="Report output dir")
+    parser.add_argument("--log", default="jar_diff.log", help="Log file path")
+    args = parser.parse_args()
+
+    # Reset logger with custom file
+    global logger
+    logger = setup_logger(args.log)
+
+    main(args.oldjar, args.newjar, args.out, args.mode, args.cfr)
