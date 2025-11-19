@@ -1,1 +1,0 @@
-keytool -genkeypair -alias myservers -keyalg RSA -keysize 2048 -validity 365 -storetype PKCS12 -keystore mykeystore.p12 -storepass changeit -dname "CN=server1.mycompany.com, OU=IT, O=MyCompany, L=City, S=State, C=IN" -ext "SAN=dns:server1.mycompany.com,dns:server2.mycompany.com,ip:192.168.1.10"
