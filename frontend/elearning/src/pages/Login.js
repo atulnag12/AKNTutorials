@@ -1,43 +1,54 @@
 import React, { useState } from 'react';
 import './Login.css';
+import { useNavigate } from 'react-router-dom';
 
 function Login() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const toggleForm = () => setIsLogin(!isLogin);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Hardcoded login check
+    if (username === "atul" && password === "atul65023") {
+      localStorage.setItem("auth", "true");
+      navigate("/");    // Redirect after login
+    } else {
+      setError("Invalid username or password");
+    }
+  };
 
   return (
     <div className="login-container">
-      <h2 className="login-heading">
-        {isLogin
-          ? 'Access Your Courses – Login or Sign Up'
-          : 'Join the Future of Learning with AKNTutorials'}
-      </h2>
+      <h2 className="login-heading">Access Your Courses – Login</h2>
 
       <div className="login-card">
-        <form>
-          {!isLogin && (
-            <>
-              <label htmlFor="fullname">Full Name</label>
-              <input type="text" id="fullname" placeholder="Enter your full name" />
-            </>
-          )}
-
-          <label htmlFor="email">Email or Phone</label>
-          <input type="text" id="email" placeholder="Enter email or phone number" />
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="email">Username</label>
+          <input
+            type="text"
+            id="email"
+            placeholder="Enter username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
 
           <label htmlFor="password">Password</label>
-          <input type="password" id="password" placeholder="Enter your password" />
+          <input
+            type="password"
+            id="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-          {isLogin && (
-            <div className="remember-me">
-              <input type="checkbox" id="remember" />
-              <label htmlFor="remember">Remember me</label>
-            </div>
-          )}
+          {error && <p className="error-msg">{error}</p>}
 
           <button type="submit" className="login-btn">
-            {isLogin ? 'Login' : 'Sign Up'}
+            Login
           </button>
 
           <div className="divider">or</div>
@@ -50,20 +61,6 @@ function Login() {
             Continue with Google
           </button>
         </form>
-
-        <div className="login-footer">
-          {isLogin ? (
-            <>
-              New to AKNTutorials?
-              <span onClick={toggleForm} className="toggle-link"> Sign up</span>
-            </>
-          ) : (
-            <>
-              Already have an account?
-              <span onClick={toggleForm} className="toggle-link"> Log in</span>
-            </>
-          )}
-        </div>
       </div>
     </div>
   );
