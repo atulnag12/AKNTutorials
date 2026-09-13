@@ -12,4 +12,3 @@ It includes student and teacher dashboards, video lecture support, course manage
 
 ### 🌐 Live Demo
 - **Frontend**: [https://atulnag12.github.io/AKNTutorials](https://atulnag12.github.io/AKNTutorials)
-- **Backend**: [https://akntutorials-123d1374ceae.herokuapp.com](https://akntutorials-123d1374ceae.herokuapp.com)
